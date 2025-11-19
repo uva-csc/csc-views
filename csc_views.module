@@ -8,6 +8,7 @@ use Drupal\views\ViewExecutable;
 function csc_views_views_pre_render(ViewExecutable $view) {
   // Target the specific view and display.
   if ($view->id() === 'events' && $view->current_display === 'block_2') {
+    $view->element['#cache']['contexts'][] = 'url.path';
     // 1. Get the first segment of the current path.
     $current_path = \Drupal::service('path.current')->getPath();
     $alias = \Drupal::service('path_alias.manager')->getAliasByPath($current_path);
@@ -15,7 +16,7 @@ function csc_views_views_pre_render(ViewExecutable $view) {
     $first_segment = $segments[0] ?? NULL;
     //csc_log_me2("First segment: $first_segment");
     if ($first_segment) {
-      //csc_log_me2("Slug in query alter: $first_segment");
+     // csc_log_me2("Slug in query alter: $first_segment");
       // 2. Map the segment to a taxonomy term ID.
       // Replace 'tags' with your vocabulary machine name.
       // Replace 'field_slug' with the field storing the term slug (URL-friendly name).
@@ -29,26 +30,26 @@ function csc_views_views_pre_render(ViewExecutable $view) {
       if ($terms) {
         $term = reset($terms);
         $term_id = $term->id();
-        // csc_log_me2("It is term $term_id");
+       // csc_log_me2("It is term $term_id");
 
         if (is_numeric($term_id)) {
           $all_rows = $view->result;
 
           // Separate featured items and others
           $featured = [];
-          //$fnids = [];
+          $fnids = [];
           $others = [];
-          //$onids = [];
+          $onids = [];
 
           foreach ($all_rows as $row) {
             // $row->_entity is the node entity
             /** @var \Drupal\node\NodeInterface $node */
             $node = $row->_entity;
 
-            /*
+
             $nid = $node->id();
             $title = $node->getTitle();
-            */
+
 
             $term_ids = $node->get('field_filter')->getValue();
 
@@ -56,11 +57,11 @@ function csc_views_views_pre_render(ViewExecutable $view) {
 
             if (in_array($term_id, $tids)) {
               $featured[] = $row;
-              //$fnids[] = "$title ($nid)";
+              $fnids[] = "$title ($nid)";
             }
             else {
               $others[] = $row;
-              //$onids[] = "$title ($nid)";
+              $onids[] = "$title ($nid)";
             }
           }
 
