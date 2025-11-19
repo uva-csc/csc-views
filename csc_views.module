@@ -36,16 +36,19 @@ function csc_views_views_pre_render(ViewExecutable $view) {
 
           // Separate featured items and others
           $featured = [];
-          $fnids = [];
+          //$fnids = [];
           $others = [];
+          //$onids = [];
 
           foreach ($all_rows as $row) {
             // $row->_entity is the node entity
             /** @var \Drupal\node\NodeInterface $node */
             $node = $row->_entity;
 
+            /*
             $nid = $node->id();
             $title = $node->getTitle();
+            */
 
             $term_ids = $node->get('field_filter')->getValue();
 
@@ -53,18 +56,22 @@ function csc_views_views_pre_render(ViewExecutable $view) {
 
             if (in_array($term_id, $tids)) {
               $featured[] = $row;
-              $fnids[] = "$title ($nid)";
+              //$fnids[] = "$title ($nid)";
             }
             else {
               $others[] = $row;
+              //$onids[] = "$title ($nid)";
             }
           }
 
+          /*
           $ftct = count($featured);
           $otct = count($others);
           $nids = implode(", ", $fnids);
+          $onids = implode(", ", $onids);
 
-          //csc_log_me2("Term: $first_segment ($term_id), Featured: $ftct ($nids), Others: $otct");
+          csc_log_me2("Term: $first_segment ($term_id), Featured: $ftct ($nids), Others: $otct ($onids)");
+          */
 
           // Combine featured first, then others
           $view->result = array_merge($featured, $others);
