@@ -8,82 +8,84 @@ use Drupal\views\ViewExecutable;
 function csc_views_views_pre_render(ViewExecutable $view) {
   // Target the specific view and display.
   if ($view->id() === 'events' && $view->current_display === 'block_2') {
-    $view->element['#cache']['contexts'][] = 'url.path';
-    // 1. Get the first segment of the current path.
-    $current_path = \Drupal::service('path.current')->getPath();
-    $alias = \Drupal::service('path_alias.manager')->getAliasByPath($current_path);
-    $segments = explode('/', trim($alias, '/'));
-    $first_segment = $segments[0] ?? NULL;
-    //csc_log_me2("First segment: $first_segment");
-    if ($first_segment) {
-     // csc_log_me2("Slug in query alter: $first_segment");
-      // 2. Map the segment to a taxonomy term ID.
-      // Replace 'tags' with your vocabulary machine name.
-      // Replace 'field_slug' with the field storing the term slug (URL-friendly name).
-      $terms = \Drupal::entityTypeManager()
-        ->getStorage('taxonomy_term')
-        ->loadByProperties([
-          'vid' => 'content_filters',
-          'name' => ucfirst($first_segment),
-        ]);
+    prioritizePathEvents($view);
+  }
+}
 
-      if ($terms) {
-        $term = reset($terms);
-        $term_id = $term->id();
-       // csc_log_me2("It is term $term_id");
+function prioritizePathEvents(ViewExecutable $view) {
+  $view->element['#cache']['contexts'][] = 'url.path';
+  // 1. Get the first segment of the current path.
+  $current_path = \Drupal::service('path.current')->getPath();
+  $alias = \Drupal::service('path_alias.manager')->getAliasByPath($current_path);
+  $segments = explode('/', trim($alias, '/'));
+  $first_segment = $segments[0] ?? NULL;
+  //csc_log_me2("First segment: $first_segment");
+  if ($first_segment) {
+    // csc_log_me2("Slug in query alter: $first_segment");
+    // 2. Map the segment to a taxonomy term ID.
+    // Replace 'tags' with your vocabulary machine name.
+    // Replace 'field_slug' with the field storing the term slug (URL-friendly name).
+    $terms = \Drupal::entityTypeManager()
+      ->getStorage('taxonomy_term')
+      ->loadByProperties([
+        'vid' => 'content_filters',
+        'name' => ucfirst($first_segment),
+      ]);
 
-        if (is_numeric($term_id)) {
-          $all_rows = $view->result;
+    if ($terms) {
+      $term = reset($terms);
+      $term_id = $term->id();
+      // csc_log_me2("It is term $term_id");
 
-          // Separate featured items and others
-          $featured = [];
-          $fnids = [];
-          $others = [];
-          $onids = [];
+      if (is_numeric($term_id)) {
+        $all_rows = $view->result;
 
-          foreach ($all_rows as $row) {
-            // $row->_entity is the node entity
-            /** @var \Drupal\node\NodeInterface $node */
-            $node = $row->_entity;
+        // Separate featured items and others
+        $featured = [];
+        $fnids = [];
+        $others = [];
+        $onids = [];
 
+        foreach ($all_rows as $row) {
+          // $row->_entity is the node entity
+          /** @var \Drupal\node\NodeInterface $node */
+          $node = $row->_entity;
 
-            $nid = $node->id();
-            $title = $node->getTitle();
+          $nid = $node->id();
+          $title = $node->getTitle();
 
+          $term_ids = $node->get('field_filter')->getValue();
 
-            $term_ids = $node->get('field_filter')->getValue();
+          $tids = array_column($term_ids, 'target_id');
 
-            $tids = array_column($term_ids, 'target_id');
-
-            if (in_array($term_id, $tids)) {
-              $featured[] = $row;
-              $fnids[] = "$title ($nid)";
-            }
-            else {
-              $others[] = $row;
-              $onids[] = "$title ($nid)";
-            }
+          if (in_array($term_id, $tids)) {
+            $featured[] = $row;
+            $fnids[] = "$title ($nid)";
           }
-
-          /*
-          $ftct = count($featured);
-          $otct = count($others);
-          $nids = implode(", ", $fnids);
-          $onids = implode(", ", $onids);
-
-          csc_log_me2("Term: $first_segment ($term_id), Featured: $ftct ($nids), Others: $otct ($onids)");
-          */
-
-          // Combine featured first, then others
-          $view->result = array_merge($featured, $others);
-
+          else {
+            $others[] = $row;
+            $onids[] = "$title ($nid)";
+          }
         }
+
+        /*
+        $ftct = count($featured);
+        $otct = count($others);
+        $nids = implode(", ", $fnids);
+        $onids = implode(", ", $onids);
+
+        csc_log_me2("Term: $first_segment ($term_id), Featured: $ftct ($nids), Others: $otct ($onids)");
+        */
+
+        // Combine featured first, then others
+        $view->result = array_merge($featured, $others);
+
       }
     }
-
-    // Only keep the first 8 items
-    $view->result = array_slice($view->result, 0, 8);
   }
+
+  // Only keep the first 8 items
+  $view->result = array_slice($view->result, 0, 8);
 }
 
 function csc_log_me2($msg='no message sent to log function', $ltype='notice', $sufx='') {

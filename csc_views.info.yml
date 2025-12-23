@@ -1,7 +1,7 @@
 name: 'CSC Views'
 type: module
 description: 'Views customization for the CSC site.'
-core_version_requirement: ^10
+core_version_requirement: ^10 | ^11
 package: CSC
 dependencies:
   - drupal:views
