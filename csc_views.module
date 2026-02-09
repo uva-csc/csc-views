@@ -1,13 +1,68 @@
 <?php
 
 use Drupal\views\ViewExecutable;
+use Symfony\Component\HttpFoundation\RedirectResponse;
+
+function csc_views_views_pre_view(ViewExecutable $view, $display_id, array &$args) {
+  $vid = $view->id();
+  $cdis = $view->current_display;
+  // Don't let day or month calendar views go on forever, only 4 months respectively
+  $day_limit = 120;
+  if ($vid === 'calendar' && $cdis === 'page_day') {
+    $date_string = $args[0];
+    $target = new \DateTime($date_string);
+    $now = new \DateTime();
+    $diff = $now->diff($target);
+    // This date more than $day_limit days in past or future.
+    if ($diff->days > $day_limit) {
+      // Redirect to the calendar view.
+      $url = \Drupal\Core\Url::fromUserInput('/calendar')->toString();
+
+      // Create redirect response
+      $response = new RedirectResponse($url);
+
+      // Send redirect immediately
+      $response->send();
+
+      // Stop further execution
+      exit();
+    }
+  } elseif ($vid === 'calendar' && $cdis === 'page_month') {
+    $request = \Drupal::request(); // Returns Symfony Request object
+
+    // Get a specific URL parameter, e.g., ?foo=bar
+    $current_month = $request->query->get('calendar_timestamp');
+    if ($current_month) {
+
+      $now_ts = time();
+      $ninety_days_seconds = $day_limit * 24 * 60 * 60; // $day_limit days in seconds
+
+      if (abs($current_month - $now_ts) >= $ninety_days_seconds) {
+        // csc_log_me2('Calendary month args: ' . $current_month);
+        // Redirect to the calendar view.
+        $url = \Drupal\Core\Url::fromUserInput('/calendar')->toString();
+
+        // Create redirect response
+        $response = new RedirectResponse($url);
+
+        // Send redirect immediately
+        $response->send();
+
+        // Stop further execution
+        exit();
+      }
+    }
+  }
+}
 
 /**
  * Implements hook_views_pre_render().
  */
 function csc_views_views_pre_render(ViewExecutable $view) {
   // Target the specific view and display.
-  if ($view->id() === 'events' && $view->current_display === 'block_2') {
+  $vid = $view->id();
+  $cdis = $view->current_display;
+  if ($vid === 'events' && $cdis === 'block_2') {
     prioritizePathEvents($view);
   }
 }
@@ -88,6 +143,7 @@ function prioritizePathEvents(ViewExecutable $view) {
   $view->result = array_slice($view->result, 0, 8);
 }
 
+/*
 function csc_log_me2($msg='no message sent to log function', $ltype='notice', $sufx='') {
   if (strlen($sufx) > 0) { $sufx = " $sufx"; }
   if ($ltype == 'warning') {
@@ -98,3 +154,4 @@ function csc_log_me2($msg='no message sent to log function', $ltype='notice', $s
     Drupal::logger("csc_bs_sass$sufx")->notice($msg);
   }
 }
+ */
