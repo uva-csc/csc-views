@@ -1,6 +1,7 @@
 # csc-views
 
 This module adds customization to various views in the CSC website at csc.virginia.edu.
+This module is deprecated. See CSC Suite.
 
 The modifications it makes are:
 ## Event Row Teasers View
